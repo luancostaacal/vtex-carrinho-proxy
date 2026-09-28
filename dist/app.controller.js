@@ -1,4 +1,3 @@
-"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -11,12 +10,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.AppController = void 0;
-const common_1 = require("@nestjs/common");
-const app_service_1 = require("./app.service");
-let AppController = class AppController {
+var AppController_1;
+import { All, Controller, Get, HttpStatus, Logger, Req, Res } from '@nestjs/common';
+import { AppService } from './app.service.js';
+let AppController = AppController_1 = class AppController {
     appService;
+    logger = new Logger(AppController_1.name);
     constructor(appService) {
         this.appService = appService;
     }
@@ -24,34 +23,48 @@ let AppController = class AppController {
         return this.appService.getHealth();
     }
     async proxy(req, res) {
-        const result = await this.appService.proxyRequest(req);
-        Object.entries(result.headers).forEach(([key, value]) => {
-            if (value) {
-                res.setHeader(key, value);
-            }
-        });
-        res.status(result.status || common_1.HttpStatus.OK);
-        res.send(result.body);
-        return;
+        const path = req.originalUrl || req.url || '/';
+        this.logger.log(`Received ${req.method} ${path}`);
+        if (!this.appService.isAuthorized(req)) {
+            this.logger.warn(`Rejected unauthorized ${req.method} ${path}`);
+            res.status(HttpStatus.UNAUTHORIZED).send({ message: 'Unauthorized' });
+            return;
+        }
+        try {
+            const result = await this.appService.proxyRequest(req);
+            this.logger.log(`Completed ${req.method} ${path} with upstream status ${result.status}`);
+            Object.entries(result.headers).forEach(([key, value]) => {
+                if (value) {
+                    res.setHeader(key, value);
+                }
+            });
+            res.status(result.status || HttpStatus.OK);
+            res.send(result.body);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.error(`Proxy failed for ${req.method} ${path}: ${message}`);
+            res.status(HttpStatus.BAD_GATEWAY).json({ message: 'VTEX upstream request failed' });
+        }
     }
 };
-exports.AppController = AppController;
 __decorate([
-    (0, common_1.Get)('health'),
+    Get('health'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], AppController.prototype, "getHealth", null);
 __decorate([
-    (0, common_1.All)('*'),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Res)()),
+    All('*'),
+    __param(0, Req()),
+    __param(1, Res()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], AppController.prototype, "proxy", null);
-exports.AppController = AppController = __decorate([
-    (0, common_1.Controller)(),
-    __metadata("design:paramtypes", [app_service_1.AppService])
+AppController = AppController_1 = __decorate([
+    Controller(),
+    __metadata("design:paramtypes", [AppService])
 ], AppController);
+export { AppController };
 //# sourceMappingURL=app.controller.js.map
