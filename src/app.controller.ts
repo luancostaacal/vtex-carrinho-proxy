@@ -18,9 +18,9 @@ export class AppController {
     const path = req.originalUrl || req.url || '/';
     this.logger.log(`Received ${req.method} ${path}`);
 
-    if (!this.appService.isAuthorized(req)) {
-      this.logger.warn(`Rejected unauthorized ${req.method} ${path}`);
-      res.status(HttpStatus.UNAUTHORIZED).send({ message: 'Unauthorized' });
+    if (!this.appService.isAllowedRequest(req)) {
+      this.logger.warn(`Rejected unsupported ${req.method} ${path}`);
+      res.status(HttpStatus.NOT_FOUND).send({ message: 'Not found' });
       return;
     }
 

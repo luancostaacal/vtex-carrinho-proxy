@@ -7,7 +7,7 @@ export interface ProxyRequest {
 }
 export declare class AppService {
     getHealth(): Record<string, string>;
-    isAuthorized(req: ProxyRequest): boolean;
+    isAllowedRequest(req: ProxyRequest): boolean;
     proxyRequest(req: ProxyRequest): Promise<{
         status: number;
         headers: Record<string, string>;

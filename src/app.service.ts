@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { timingSafeEqual } from 'node:crypto';
 
 export interface ProxyRequest {
   method?: string;
@@ -15,17 +14,23 @@ export class AppService {
     return { status: 'ok', timestamp: new Date().toISOString() };
   }
 
-  isAuthorized(req: ProxyRequest): boolean {
-    const expectedToken = process.env.PROXY_SHARED_SECRET;
-    const suppliedToken = req.headers['x-proxy-token'];
+  isAllowedRequest(req: ProxyRequest): boolean {
+    const method = (req.method ?? 'GET').toUpperCase();
+    const path = new URL(req.originalUrl || req.url || '/', 'http://localhost').pathname;
 
-    if (!expectedToken || typeof suppliedToken !== 'string') {
-      return false;
+    if (method === 'GET') {
+      return path === '/api/checkout/pub/orderForm';
     }
 
-    const expected = Buffer.from(expectedToken);
-    const supplied = Buffer.from(suppliedToken);
-    return expected.length === supplied.length && timingSafeEqual(expected, supplied);
+    if (method === 'PATCH') {
+      return /^\/api\/checkout\/pub\/orderForm\/[^/]+\/items$/.test(path);
+    }
+
+    if (method === 'POST') {
+      return /^\/api\/checkout\/pub\/orderForm\/[^/]+\/attachments\/marketingData$/.test(path);
+    }
+
+    return false;
   }
 
   async proxyRequest(req: ProxyRequest): Promise<{

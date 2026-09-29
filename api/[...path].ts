@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { AppService, type ProxyRequest } from '../src/app.service';
+import 'reflect-metadata';
+import { AppService, type ProxyRequest } from '../src/app.service.js';
 
 type VercelRequest = IncomingMessage & { body?: unknown };
 
@@ -17,11 +18,11 @@ export default async function handler(req: VercelRequest, res: ServerResponse) {
     return;
   }
 
-  if (!appService.isAuthorized(req as ProxyRequest)) {
-    console.warn(`[proxy] rejected unauthorized ${method} ${path}`);
-    res.statusCode = 401;
+  if (!appService.isAllowedRequest(req as ProxyRequest)) {
+    console.warn(`[proxy] rejected unsupported ${method} ${path}`);
+    res.statusCode = 404;
     res.setHeader('content-type', 'application/json');
-    res.end(JSON.stringify({ message: 'Unauthorized' }));
+    res.end(JSON.stringify({ message: 'Not found' }));
     return;
   }
 

@@ -5,20 +5,23 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 import { Injectable } from '@nestjs/common';
-import { timingSafeEqual } from 'node:crypto';
 let AppService = class AppService {
     getHealth() {
         return { status: 'ok', timestamp: new Date().toISOString() };
     }
-    isAuthorized(req) {
-        const expectedToken = process.env.PROXY_SHARED_SECRET;
-        const suppliedToken = req.headers['x-proxy-token'];
-        if (!expectedToken || typeof suppliedToken !== 'string') {
-            return false;
+    isAllowedRequest(req) {
+        const method = (req.method ?? 'GET').toUpperCase();
+        const path = new URL(req.originalUrl || req.url || '/', 'http://localhost').pathname;
+        if (method === 'GET') {
+            return path === '/api/checkout/pub/orderForm';
         }
-        const expected = Buffer.from(expectedToken);
-        const supplied = Buffer.from(suppliedToken);
-        return expected.length === supplied.length && timingSafeEqual(expected, supplied);
+        if (method === 'PATCH') {
+            return /^\/api\/checkout\/pub\/orderForm\/[^/]+\/items$/.test(path);
+        }
+        if (method === 'POST') {
+            return /^\/api\/checkout\/pub\/orderForm\/[^/]+\/attachments\/marketingData$/.test(path);
+        }
+        return false;
     }
     async proxyRequest(req) {
         const baseUrl = process.env.VTEX_BASE_URL ?? 'https://lojaacal.vtexcommercestable.com.br';
